@@ -1,0 +1,23 @@
+
+services:
+  qsnapman:
+    build: .
+    container_name: qsnapman
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    volumes:
+      - qsnapman-data:/data
+    environment:
+      - PORT=3010
+      - DATA_DIR=/data
+      # Change this to a long random string in production!
+      - SESSION_SECRET=cad286cf24b8aba67371489b244e9beb2505715c611c3b8c17cb6eae64648209
+    networks:
+      - qsnapman-net
+
+volumes:
+  qsnapman-data:
+
+networks:
+  qsnapman-net:

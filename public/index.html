@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QSnapMan — Qumulo Snapshot Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Qumulo Design System Variables ─────────────────────────────── */
+:root {
+  --agave-400: hsl(192, 85%, 56%);
+  --agave-500: hsl(192, 100%, 40%);
+  --agave-600: hsl(197, 100%, 34%);
+  --agave-700: hsl(197, 100%, 23%);
+  --agave-800: hsl(197, 100%, 16%);
+
+  --blackberry-950: hsl(213, 22%, 10%);
+  --blackberry-925: hsl(212, 22%, 12%);
+  --blackberry-900: hsl(212, 22%, 14%);
+  --blackberry-850: hsl(213, 23%, 16%);
+  --blackberry-800: hsl(213, 23%, 18%);
+  --blackberry-750: hsl(210, 26%, 21%);
+  --blackberry-700: hsl(209, 27%, 24%);
+  --blackberry-600: hsl(211, 19%, 38%);
+  --blackberry-500: hsl(214, 13%, 55%);
+  --blackberry-400: hsl(213, 13%, 66%);
+  --blackberry-100: hsl(213, 22%, 92%);
+
+  --lychee-50:  hsl(180, 4%, 95%);
+  --lychee-100: hsl(210, 5%, 92%);
+  --lychee-300: hsl(204, 5%, 79%);
+  --lychee-400: hsl(210, 5%, 67%);
+  --lychee-500: hsl(207, 5%, 54%);
+
+  --pomegranate-400: hsl(355, 100%, 74%);
+  --pomegranate-500: hsl(355, 100%, 64%);
+  --pomegranate-600: hsl(352, 80%, 47%);
+  --pomegranate-700: hsl(343, 82%, 30%);
+
+  --kiwi-400: hsl(83, 98%, 42%);
+  --kiwi-500: hsl(83, 98%, 34%);
+  --kiwi-600: hsl(82, 98%, 24%);
+  --kiwi-700: hsl(78, 97%, 14%);
+
+  --banana-400: hsl(52, 100%, 40%);
+  --banana-500: hsl(52, 100%, 33%);
+  --banana-600: hsl(52, 100%, 23%);
+  --banana-700: hsl(52, 100%, 14%);
+
+  --kumquat-400: hsl(36, 100%, 50%);
+  --kumquat-700: hsl(38, 100%, 18%);
+
+  --eggplant-400: hsl(246, 54%, 73%);
+  --mint-400: hsl(150, 53%, 56%);
+
+  --font: 'Nunito', 'system-ui', -apple-system, sans-serif;
+  --radius-sm: 0.375rem;
+  --radius:    0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--blackberry-950);
+  color: var(--lychee-300);
+  font-family: var(--font);
+  font-weight: 300;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--blackberry-925); }
+::-webkit-scrollbar-thumb { background: var(--blackberry-700); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blackberry-600); }
+
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--agave-500); outline-offset: 2px;
+}
+
+/* ── LOGIN ──────────────────────────────────────────────────────── */
+#login-screen {
+  display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  background: radial-gradient(ellipse at 55% 40%, hsl(197, 100%, 8%) 0%, var(--blackberry-950) 65%);
+}
+.login-box {
+  width: 400px;
+  background: var(--blackberry-900); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius-lg); padding: 2.5rem;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5); animation: fadeUp 0.35s ease;
+}
+.login-wordmark { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; }
+.login-wordmark-q    { font-size: 1.5rem; font-weight: 200; color: var(--agave-500); letter-spacing: -0.02em; }
+.login-wordmark-app  { font-size: 1rem; font-weight: 300; color: var(--lychee-500); }
+.login-tagline       { font-size: 0.75rem; font-weight: 300; color: var(--lychee-500); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2rem; }
+.login-heading       { font-size: 0.75rem; font-weight: 600; color: var(--lychee-400); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem; }
+
+/* ── Form ───────────────────────────────────────────────────────── */
+.field { margin-bottom: 1rem; }
+.field label {
+  display: block; font-size: 0.75rem; font-weight: 500; color: var(--lychee-400);
+  margin-bottom: 0.375rem; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.field input, .field select {
+  width: 100%; padding: 0.5rem 0.75rem;
+  background: var(--blackberry-800); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius-sm); color: var(--lychee-300);
+  font-family: var(--font); font-size: 0.9375rem; font-weight: 300;
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--agave-500);
+  box-shadow: 0 0 0 2px hsla(192, 100%, 40%, 0.25);
+}
+.field input::placeholder { color: var(--lychee-500); }
+.field select option { background: var(--blackberry-800); }
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: none;
+  font-family: var(--font); font-size: 0.875rem; font-weight: 400;
+  cursor: pointer; transition: background-color 0.15s, opacity 0.15s;
+  white-space: nowrap; line-height: 1;
+}
+.btn-primary     { background: var(--agave-500);       color: var(--blackberry-950); }
+.btn-primary:hover { background: var(--agave-600); }
+.btn-secondary   { background: transparent; color: var(--lychee-300); border: 1px solid var(--blackberry-700); }
+.btn-secondary:hover { background: var(--blackberry-850); border-color: var(--blackberry-600); }
+.btn-destructive { background: var(--pomegranate-500); color: #fff; }
+.btn-destructive:hover { background: var(--pomegranate-600); }
+.btn-ghost       { background: transparent; color: var(--lychee-400); }
+.btn-ghost:hover { color: var(--lychee-300); background: var(--blackberry-850); }
+.btn-sm  { padding: 0.3125rem 0.75rem; font-size: 0.8125rem; }
+.btn-xs  { padding: 0.1875rem 0.625rem; font-size: 0.75rem; }
+.btn-full { width: 100%; justify-content: center; padding: 0.625rem; font-size: 1rem; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.error-banner {
+  background: hsla(355, 100%, 64%, 0.12); border: 1px solid var(--pomegranate-600);
+  color: var(--pomegranate-400); padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 300; margin-bottom: 1rem;
+}
+
+/* ── App shell ──────────────────────────────────────────────────── */
+#app { display: none; flex-direction: column; height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0 1.25rem; height: 52px;
+  background: var(--blackberry-925); border-bottom: 1px solid var(--blackberry-700); flex-shrink: 0;
+}
+.topbar-wordmark { display: flex; align-items: baseline; gap: 0.5rem; }
+.topbar-wordmark-q   { font-size: 1.125rem; font-weight: 200; color: var(--agave-500); letter-spacing: -0.02em; }
+.topbar-wordmark-app { font-size: 0.875rem; font-weight: 300; color: var(--lychee-500); }
+.topbar-divider { width: 1px; height: 18px; background: var(--blackberry-700); margin: 0 0.25rem; }
+.topbar-nav { display: flex; align-items: center; gap: 0.25rem; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.topbar-user { font-size: 0.8125rem; font-weight: 300; color: var(--lychee-500); }
+.topbar-user strong { color: var(--lychee-400); font-weight: 400; }
+
+.cluster-bar {
+  display: flex; align-items: center; gap: 0.375rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--blackberry-950); border-bottom: 1px solid var(--blackberry-700);
+  flex-shrink: 0; overflow-x: auto;
+}
+.cluster-bar-label {
+  font-size: 0.6875rem; font-weight: 600; color: var(--lychee-500);
+  text-transform: uppercase; letter-spacing: 0.08em; margin-right: 0.5rem; white-space: nowrap;
+}
+.cluster-tab {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.3125rem 0.875rem; border-radius: var(--radius-sm);
+  background: transparent; border: 1px solid var(--blackberry-700);
+  color: var(--lychee-500); font-family: var(--font); font-size: 0.8125rem;
+  font-weight: 400; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.cluster-tab:hover { border-color: var(--blackberry-600); color: var(--lychee-300); background: var(--blackberry-850); }
+.cluster-tab.active { background: var(--agave-800); border-color: var(--agave-600); color: var(--agave-400); }
+.cluster-tab .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blackberry-600); flex-shrink: 0; }
+.cluster-tab.active .status-dot { background: var(--kiwi-400); box-shadow: 0 0 5px var(--kiwi-400); }
+.cluster-tab .status-dot.calculating { background: var(--banana-400); box-shadow: 0 0 5px var(--banana-400); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.main { flex: 1; overflow: hidden; display: flex; }
+.content { flex: 1; padding: 1.5rem; overflow-y: auto; }
+
+/* ── Sections ───────────────────────────────────────────────────── */
+.section-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; justify-content: space-between; }
+.section-title  { font-size: 1.5rem; font-weight: 300; color: var(--lychee-100); letter-spacing: -0.01em; line-height: 1.2; }
+.section-sub    { font-size: 0.875rem; font-weight: 300; color: var(--lychee-500); margin-top: 0.125rem; }
+
+/* ── Cards ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--blackberry-900); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
+}
+
+/* ── Stats ──────────────────────────────────────────────────────── */
+.stats-row { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.stat-card {
+  background: var(--blackberry-900); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius); padding: 1rem 1.25rem; min-width: 140px;
+}
+.stat-label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--lychee-500); margin-bottom: 0.375rem; }
+.stat-value { font-size: 1.875rem; font-weight: 200; color: var(--lychee-100); line-height: 1; }
+.stat-value.agave  { color: var(--agave-400); }
+.stat-value.banana { color: var(--banana-400); }
+.stat-value.kiwi   { color: var(--kiwi-400); }
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
+.toolbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.875rem; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 340px; }
+.search-icon { position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: var(--lychee-500); font-size: 0.875rem; pointer-events: none; }
+.search-input {
+  width: 100%; padding: 0.4375rem 0.75rem 0.4375rem 2rem;
+  background: var(--blackberry-800); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius-sm); color: var(--lychee-300);
+  font-family: var(--font); font-size: 0.875rem; font-weight: 300;
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus { border-color: var(--agave-500); box-shadow: 0 0 0 2px hsla(192, 100%, 40%, 0.2); }
+.search-input::placeholder { color: var(--lychee-500); }
+.result-count { font-size: 0.8125rem; font-weight: 300; color: var(--lychee-500); }
+
+/* ── Table ──────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--blackberry-700); }
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--blackberry-800); }
+th {
+  padding: 0.6875rem 1rem; text-align: left;
+  font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--lychee-100); border-bottom: 1px solid var(--blackberry-700);
+  cursor: pointer; user-select: none; white-space: nowrap; transition: color 0.15s;
+}
+th:hover { color: var(--agave-400); }
+th.sorted { color: var(--agave-400); }
+th .sort-arrow { display: inline-block; margin-left: 0.25rem; color: var(--blackberry-600); font-size: 0.7rem; }
+th.sorted .sort-arrow { color: var(--agave-500); }
+td {
+  padding: 0.75rem 1rem; border-bottom: 1px solid var(--blackberry-700);
+  font-size: 0.9375rem; font-weight: 300; color: var(--lychee-300); vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--blackberry-850); }
+
+.td-name    { font-weight: 400; color: var(--lychee-100); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-id      { font-size: 0.75rem; color: var(--lychee-500); margin-top: 0.125rem; font-weight: 300; }
+.td-mono    { font-family: 'Courier New', monospace; font-size: 0.875rem; }
+.td-size    { color: var(--banana-400); font-weight: 400; }
+.td-savings { color: var(--kiwi-400); font-weight: 400; }
+.td-dim     { color: var(--lychee-500); font-size: 0.875rem; }
+.td-na      { color: var(--lychee-500); font-size: 0.8125rem; font-style: italic; }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid var(--blackberry-700); border-top-color: var(--agave-400);
+  border-radius: 50%; animation: spin 0.55s linear infinite;
+  vertical-align: middle; margin-right: 0.375rem;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block; padding: 0.125rem 0.5rem; border-radius: 0.25rem;
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.badge-info    { background: var(--agave-500);       color: var(--blackberry-950); }
+.badge-success { background: var(--kiwi-500);        color: #fff; }
+.badge-warning { background: var(--banana-400);      color: var(--blackberry-950); }
+.badge-error   { background: var(--pomegranate-500); color: #fff; }
+.badge-neutral { background: var(--blackberry-700);  color: var(--lychee-300); }
+
+/* ── Empty / loading ────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 4rem 1.5rem; color: var(--lychee-500); }
+.empty-icon  { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-msg   { font-size: 1rem; font-weight: 400; color: var(--lychee-400); margin-bottom: 0.375rem; }
+.empty-sub   { font-size: 0.875rem; margin-bottom: 1.25rem; }
+.loading-cell { text-align: center; padding: 3rem; color: var(--lychee-500); font-size: 0.9375rem; }
+
+/* ── Modal ──────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; animation: fadeIn 0.15s ease; padding: 1.25rem;
+}
+.modal {
+  background: var(--blackberry-900); border: 1px solid var(--blackberry-700);
+  border-radius: var(--radius-lg); padding: 1.75rem; width: 460px; max-width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55); animation: fadeUp 0.2s ease;
+}
+.modal-title { font-size: 1.25rem; font-weight: 300; color: var(--lychee-100); margin-bottom: 1.25rem; letter-spacing: -0.01em; }
+.modal-actions { display: flex; gap: 0.625rem; justify-content: flex-end; margin-top: 1.5rem; }
+.modal-danger-zone {
+  background: hsla(355, 100%, 64%, 0.08); border: 1px solid var(--pomegranate-700);
+  border-radius: var(--radius-sm); padding: 0.875rem 1rem; margin-bottom: 1.25rem;
+  font-size: 0.9375rem; font-weight: 300; color: var(--lychee-300); line-height: 1.65;
+}
+.danger-name    { color: var(--pomegranate-400); font-weight: 600; }
+.danger-savings { color: var(--kiwi-400); font-weight: 500; }
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+#toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast {
+  padding: 0.75rem 1.125rem; border-radius: var(--radius-sm);
+  font-size: 0.875rem; font-weight: 300; max-width: 320px;
+  animation: slideInRight 0.2s ease; border-left: 3px solid transparent;
+  background: var(--blackberry-850); box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.toast-success { border-left-color: var(--kiwi-500); }
+.toast-error   { border-left-color: var(--pomegranate-500); }
+.toast-info    { border-left-color: var(--agave-500); }
+
+/* ── Admin table ────────────────────────────────────────────────── */
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th { text-align: left; padding: 0.625rem 0.875rem; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--lychee-500); border-bottom: 1px solid var(--blackberry-700); }
+.admin-table td { padding: 0.75rem 0.875rem; border-bottom: 1px solid var(--blackberry-700); font-size: 0.9375rem; font-weight: 300; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: var(--blackberry-850); }
+
+/* ── Util ───────────────────────────────────────────────────────── */
+.flex-row   { display: flex; align-items: center; gap: 0.625rem; }
+.flex-right { justify-content: flex-end; }
+.mt-sm      { margin-top: 0.75rem; }
+
+/* ── Animations ─────────────────────────────────────────────────── */
+@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+@keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes slideInRight { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+@keyframes spin    { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-wordmark">
+      <span class="login-wordmark-q">QSnapMan</span>
+      <span class="login-wordmark-app">Snapshot Manager</span>
+    </div>
+    <div class="login-tagline">Powered by Qumulo REST API</div>
+    <div class="login-heading">Sign In</div>
+    <div id="login-error" class="error-banner" style="display:none"></div>
+    <div class="field"><label>Username</label><input type="text" id="login-user" autocomplete="username" placeholder="admin"></div>
+    <div class="field"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-full mt-sm" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────────────────── -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-wordmark">
+      <span class="topbar-wordmark-q">QSnapMan</span>
+      <span class="topbar-wordmark-app">Snapshot Manager</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-nav">
+      <button class="btn btn-ghost btn-sm" onclick="showView('snapshots')" id="nav-snapshots">Snapshots</button>
+      <button class="btn btn-ghost btn-sm" onclick="showView('clusters')"  id="nav-clusters">Clusters</button>
+      <span id="nav-admin-wrap" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showView('admin')" id="nav-admin">Admin</button>
+      </span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user">Signed in as <strong id="topbar-username"></strong></span>
+      <button class="btn btn-ghost btn-sm" onclick="showChangePassword()">Password</button>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="cluster-bar" id="cluster-bar" style="display:none">
+    <span class="cluster-bar-label">Cluster</span>
+    <div id="cluster-tabs" style="display:flex;gap:0.375rem;flex-wrap:nowrap"></div>
+    <div id="cluster-bar-add" style="margin-left:auto;display:none">
+      <button class="btn btn-ghost btn-xs" onclick="showView('clusters')">+ Add Cluster</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="content" id="main-content"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="modal-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+const state = {
+  user: null, clusters: [], activeCluster: null,
+  snapshots: [], snapsFilter: '',
+  sortCol: 'name', sortAsc: true,
+  savingsCache: {}, currentView: 'snapshots',
+  jobStatus: 'idle', jobTotal: 0, jobCompleted: 0,
+  pollTimer: null,
+  clusterJobStatus: {}  // clusterId -> 'idle'|'running'|'complete'|'cancelled'|'error'
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  API
+// ═══════════════════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════════
+async function init() {
+  try { loginSuccess(await api('GET', '/api/auth/me')); }
+  catch { showLoginScreen(); }
+}
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+async function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  if (!u || !p) { err.textContent = 'Please enter your username and password.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    loginSuccess(await api('POST', '/api/auth/login', { username: u, password: p }));
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+function loginSuccess(me) {
+  state.user = me;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('topbar-username').textContent = me.username;
+  if (me.role === 'admin') document.getElementById('nav-admin-wrap').style.display = 'inline';
+  loadClusters().then(() => showView('snapshots'));
+}
+async function logout() {
+  await api('POST', '/api/auth/logout');
+  state.user = null; state.clusters = []; state.activeCluster = null;
+  showLoginScreen();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════════════════════════════════
+function showView(view) {
+  state.currentView = view;
+  document.getElementById('cluster-bar').style.display = view === 'snapshots' ? 'flex' : 'none';
+  if (view !== 'snapshots') stopPolling();
+  const mc = document.getElementById('main-content');
+  if (view === 'snapshots') renderSnapshotsView(mc);
+  else if (view === 'clusters') renderClustersView(mc);
+  else if (view === 'admin') renderAdminView(mc);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CLUSTERS
+// ═══════════════════════════════════════════════════════════════════
+async function loadClusters() {
+  state.clusters = await api('GET', '/api/clusters');
+  await refreshAllClusterJobStatuses();
+  renderClusterTabs();
+  if (!state.activeCluster && state.clusters.length > 0)
+    state.activeCluster = state.clusters[0].id;
+}
+
+async function refreshAllClusterJobStatuses() {
+  await Promise.allSettled(state.clusters.map(async c => {
+    try {
+      const data = await api('GET', `/api/clusters/${c.id}/savings/status`);
+      state.clusterJobStatus[c.id] = data.job.status;
+    } catch { state.clusterJobStatus[c.id] = 'idle'; }
+  }));
+  renderClusterTabs();
+}
+function renderClusterTabs() {
+  const el = document.getElementById('cluster-tabs');
+  const addBtn = document.getElementById('cluster-bar-add');
+  if (state.clusters.length === 0) {
+    el.innerHTML = '<span style="font-size:0.8125rem;color:var(--lychee-500)">No clusters configured</span>';
+    if (addBtn) addBtn.style.display = 'block';
+    return;
+  }
+  if (addBtn) addBtn.style.display = state.user?.role === 'admin' ? 'block' : 'none';
+  el.innerHTML = state.clusters.map(c => {
+    const jobSt = state.clusterJobStatus[c.id] || 'idle';
+    const dotClass = jobSt === 'running' ? 'status-dot calculating' : 'status-dot';
+    const jobBadge = jobSt === 'running' ? ' <span style="font-size:0.65rem;color:var(--banana-400);margin-left:2px">●</span>' : '';
+    return `<button class="cluster-tab${c.id === state.activeCluster ? ' active' : ''}" onclick="selectCluster(${c.id})">
+      <span class="${dotClass}"></span>${escHtml(c.name)}${jobBadge}
+    </button>`;
+  }).join('');
+}
+function selectCluster(id) {
+  state.activeCluster = id; state.snapshots = []; state.savingsCache = {};
+  renderClusterTabs();
+  if (state.currentView === 'snapshots') showView('snapshots');
+}
+
+function renderClustersView(mc) {
+  mc.innerHTML = `
+    <div class="section-header">
+      <div><div class="section-title">Clusters</div><div class="section-sub">Manage Qumulo cluster connections</div></div>
+      ${state.user?.role==='admin' ? '<button class="btn btn-primary btn-sm" onclick="showAddCluster()">+ Add Cluster</button>' : ''}
+    </div>
+    <div class="card">
+      ${state.clusters.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-msg">No clusters configured</div><div class="empty-sub">Add a Qumulo cluster to get started</div></div>`
+        : `<table class="admin-table"><thead><tr>
+            <th>Name</th><th>Host</th><th>Port</th><th>API User</th><th>Added</th>
+            ${state.user?.role==='admin'?'<th></th>':''}
+           </tr></thead><tbody>
+           ${state.clusters.map(c=>`<tr>
+             <td style="font-weight:500;color:var(--lychee-100)">${escHtml(c.name)}</td>
+             <td class="td-mono">${escHtml(c.host)}</td>
+             <td class="td-mono">${c.port}</td>
+             <td class="td-mono">${escHtml(c.username)}</td>
+             <td class="td-dim">${fmtDate(c.created_at)}</td>
+             ${state.user?.role==='admin'?`<td><div class="flex-row flex-right">
+               <button class="btn btn-secondary btn-xs" onclick="testCluster(${c.id})">Test</button>
+               <button class="btn btn-secondary btn-xs" onclick="showEditCluster(${c.id})">Edit</button>
+               <button class="btn btn-destructive btn-xs" onclick="showDeleteCluster(${c.id})">Delete</button>
+             </div></td>`:''}
+           </tr>`).join('')}
+           </tbody></table>`
+      }
+    </div>`;
+}
+
+function showAddCluster() {
+  showModal(`<div class="modal-title">Add Cluster</div>
+    <div class="field"><label>Display Name</label><input id="m-cname" placeholder="Production Cluster"></div>
+    <div class="field"><label>Host / IP Address</label><input id="m-chost" placeholder="192.168.1.100"></div>
+    <div class="field"><label>API Port</label><input id="m-cport" value="8000"></div>
+    <div class="field"><label>API Username</label><input id="m-cuser" placeholder="admin"></div>
+    <div class="field"><label>API Password</label><input id="m-cpass" type="password" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doAddCluster()">Add Cluster</button>
+    </div>`);
+}
+async function doAddCluster() {
+  const name=v('m-cname'),host=v('m-chost'),port=v('m-cport'),username=v('m-cuser'),password=v('m-cpass');
+  if (!name||!host||!username||!password) { toast('All fields are required','error'); return; }
+  try {
+    await api('POST','/api/clusters',{name,host,port:parseInt(port)||8000,username,password});
+    closeModal(); await loadClusters(); toast(`Cluster "${name}" added`,'success'); showView('clusters');
+  } catch(e) { toast(e.message,'error'); }
+}
+function showEditCluster(id) {
+  const c=state.clusters.find(x=>x.id===id); if(!c) return;
+  showModal(`<div class="modal-title">Edit Cluster</div>
+    <div class="field"><label>Display Name</label><input id="m-cname" value="${escHtml(c.name)}"></div>
+    <div class="field"><label>Host / IP Address</label><input id="m-chost" value="${escHtml(c.host)}"></div>
+    <div class="field"><label>API Port</label><input id="m-cport" value="${c.port}"></div>
+    <div class="field"><label>API Username</label><input id="m-cuser" value="${escHtml(c.username)}"></div>
+    <div class="field"><label>New Password <span style="color:var(--lychee-500);font-weight:300">(leave blank to keep)</span></label><input id="m-cpass" type="password" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doEditCluster(${id})">Save Changes</button>
+    </div>`);
+}
+async function doEditCluster(id) {
+  const name=v('m-cname'),host=v('m-chost'),port=v('m-cport'),username=v('m-cuser'),password=v('m-cpass');
+  if (!name||!host||!username) { toast('Name, host, username required','error'); return; }
+  try {
+    const body={name,host,port:parseInt(port)||8000,username}; if(password) body.password=password;
+    await api('PUT',`/api/clusters/${id}`,body);
+    closeModal(); await loadClusters(); toast('Cluster updated','success'); showView('clusters');
+  } catch(e) { toast(e.message,'error'); }
+}
+function showDeleteCluster(id) {
+  const c=state.clusters.find(x=>x.id===id);
+  showModal(`<div class="modal-title">Remove Cluster</div>
+    <div class="modal-danger-zone">Remove <span class="danger-name">${escHtml(c.name)}</span> (${escHtml(c.host)}) from QSnapMan?<br>
+    This only removes the saved connection — no data on the cluster is affected.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-destructive" onclick="doDeleteCluster(${id})">Remove Cluster</button>
+    </div>`);
+}
+async function doDeleteCluster(id) {
+  try {
+    await api('DELETE',`/api/clusters/${id}`);
+    closeModal(); await loadClusters();
+    if (state.activeCluster===id) state.activeCluster=state.clusters[0]?.id||null;
+    toast('Cluster removed','success'); showView('clusters');
+  } catch(e) { toast(e.message,'error'); }
+}
+async function testCluster(id) {
+  toast('Testing connection…','info');
+  try { await api('POST',`/api/clusters/${id}/test`); toast('Connection successful ✓','success'); }
+  catch(e) { toast('Connection failed: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SNAPSHOTS
+// ═══════════════════════════════════════════════════════════════════
+async function renderSnapshotsView(mc) {
+  if (!state.activeCluster) {
+    mc.innerHTML=`<div class="empty-state"><div class="empty-icon">🗄️</div>
+      <div class="empty-msg">No cluster selected</div>
+      <div class="empty-sub">Add a Qumulo cluster to manage its snapshots</div>
+      ${state.user?.role==='admin'?'<button class="btn btn-primary btn-sm" onclick="showView(\'clusters\')">Add Cluster</button>':''}
+      </div>`; return;
+  }
+  const cluster=state.clusters.find(c=>c.id===state.activeCluster); if(!cluster) return;
+  mc.innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">${escHtml(cluster.name)}</div>
+        <div class="section-sub">${escHtml(cluster.host)}:${cluster.port} &mdash; Snapshot inventory</div></div>
+      <button class="btn btn-primary btn-sm" id="refresh-btn" onclick="refreshSnapshots()">⟳ Refresh</button>
+    </div>
+    <div id="snap-stats" class="stats-row"></div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" id="snap-filter" placeholder="Filter by snapshot name…"
+          value="${escHtml(state.snapsFilter)}" oninput="applyFilter(this.value)">
+      </div>
+      <span id="snap-count" class="result-count"></span>
+      <button class="btn btn-secondary btn-sm" id="calc-all-btn" onclick="calcAllSavings()">⚡ Calculate All Savings</button>
+      <button class="btn btn-ghost btn-sm" id="calc-cancel-btn" onclick="cancelCalcAll()" style="display:none;color:var(--pomegranate-400)">✕ Cancel</button>
+      <button class="btn btn-ghost btn-sm" id="calc-clear-btn" onclick="clearSavingsCache()" style="display:none;color:var(--lychee-500)">Clear Cache</button>
+      <span id="calc-progress" style="font-size:0.8125rem;color:var(--lychee-500);display:none"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          ${thCol('name','Snapshot Name')}${thCol('id','ID')}${thCol('path','Directory')}${thCol('created','Created')}
+          ${thCol('expiry','Expires')}${thCol('size','Space Used')}${thCol('savings','Savings if Deleted')}
+          <th style="cursor:default">Actions</th>
+        </tr></thead>
+        <tbody id="snap-tbody">
+          <tr><td colspan="8" class="loading-cell"><span class="spinner"></span>Loading snapshots…</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+  if (state.snapshots.length===0) await refreshSnapshots(false); else renderSnapshotRows();
+}
+
+async function refreshSnapshots(showToast=true) {
+  const btn=document.getElementById('refresh-btn');
+  const tbody=document.getElementById('snap-tbody');
+  if (btn) { btn.disabled=true; btn.textContent='⟳ Refreshing…'; }
+  if (tbody) tbody.innerHTML='<tr><td colspan="8" class="loading-cell"><span class="spinner"></span>Loading snapshots…</td></tr>';
+  try {
+    const data=await api('GET',`/api/clusters/${state.activeCluster}/snapshots`);
+    state.snapshots=(data.entries||data.snapshots||[]).map(s=>({
+      id:s.id, name:s.name,
+      created:s.timestamp||s.created,
+      expiry:s.expiration_time||s.expiry||null,
+      size:s.size_used_bytes!=null?s.size_used_bytes:(s.size!=null?s.size:null),
+      lock_key: s.lock_key ?? null,
+      owned: Array.isArray(s.owners) && s.owners.length > 0,
+      path: s.source_file_path ?? ''
+    }));
+    state.savingsCache={};
+    renderSnapshotRows();
+    if (showToast) toast(`Loaded ${state.snapshots.length} snapshots`,'success');
+    await loadSavingsStatus();
+  } catch(e) {
+    if (tbody) tbody.innerHTML=`<tr><td colspan="8" class="loading-cell" style="color:var(--pomegranate-400)">Error: ${escHtml(e.message)}</td></tr>`;
+    toast('Failed to load snapshots: '+e.message,'error');
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent='⟳ Refresh'; }
+  }
+}
+
+function renderSnapshotRows() {
+  const tbody=document.getElementById('snap-tbody');
+  const statsEl=document.getElementById('snap-stats');
+  const countEl=document.getElementById('snap-count');
+  if (!tbody) return;
+
+  let snaps=[...state.snapshots];
+  if (state.snapsFilter) { const q=state.snapsFilter.toLowerCase(); snaps=snaps.filter(s=>s.name.toLowerCase().includes(q)); }
+
+  snaps.sort((a,b)=>{
+    let av=a[state.sortCol],bv=b[state.sortCol];
+    if (['size','id'].includes(state.sortCol)) { av=parseFloat(av)||0; bv=parseFloat(bv)||0; }
+    else if (state.sortCol==='savings') {
+      av=typeof state.savingsCache[a.id]==='number'?state.savingsCache[a.id]:-1;
+      bv=typeof state.savingsCache[b.id]==='number'?state.savingsCache[b.id]:-1;
+    } else { av=String(av||''); bv=String(bv||''); }
+    if (av<bv) return state.sortAsc?-1:1;
+    if (av>bv) return state.sortAsc?1:-1;
+    return 0;
+  });
+
+  const totalSize=state.snapshots.reduce((s,x)=>s+(parseFloat(x.size)||0),0);
+  if (statsEl) statsEl.innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Snapshots</div><div class="stat-value agave">${state.snapshots.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Showing</div><div class="stat-value">${snaps.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Space Used</div><div class="stat-value banana">${fmtBytes(totalSize)}</div></div>`;
+  if (countEl) countEl.textContent=snaps.length!==state.snapshots.length
+    ?`${snaps.length} of ${state.snapshots.length} snapshots`
+    :`${snaps.length} snapshot${snaps.length!==1?'s':''}`;
+
+  if (snaps.length===0) { tbody.innerHTML='<tr><td colspan="8" class="loading-cell">No snapshots match your filter.</td></tr>'; return; }
+
+  tbody.innerHTML=snaps.map(s=>{
+    const sav=state.savingsCache[s.id];
+    let savCell;
+    if (sav===undefined) {
+      savCell=`<button class="btn btn-ghost btn-xs" onclick="calcOneSavings(${s.id})">Calculate</button>`;
+    } else if (sav==='loading') {
+      savCell=`<span style="color:var(--lychee-500);font-size:0.8125rem"><span class="spinner" style="width:11px;height:11px"></span>Calculating…</span>`;
+    } else if (sav && sav.error) {
+      savCell=`<span class="td-na" style="margin-right:6px;cursor:help" title="${escHtml(sav.error)}">Failed ⓘ</span><button class="btn btn-ghost btn-xs" onclick="calcOneSavings(${s.id})">Retry</button>`;
+    } else {
+      savCell=`<span class="td-savings">${fmtBytes(sav)}</span>`;
+    }
+    return `<tr>
+      <td><div class="td-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div></td>
+      <td class="td-mono td-dim">${s.id}</td>
+      <td class="td-mono td-dim" title="${escHtml(s.path)}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(s.path)||'<span style="color:var(--lychee-500)">—</span>'}</td>
+      <td class="td-dim">${fmtDateTime(s.created)}</td>
+      <td class="td-dim">${s.expiry?fmtDateTime(s.expiry):'<span style="color:var(--lychee-500)">Never</span>'}</td>
+      <td>${s.size!=null?`<span class="td-size">${fmtBytes(s.size)}</span>`:'<span class="td-na">—</span>'}</td>
+      <td>${savCell}</td>
+      <td>
+        <div class="flex-row">
+          ${(s.lock_key || s.owned)
+            ? (() => {
+                const reasons = [];
+                if (s.lock_key) reasons.push('Snapshot is locked');
+                if (s.owned)    reasons.push('Owned by a replication relationship');
+                const labels = [];
+                if (s.lock_key) labels.push('<span class="badge badge-warning">Locked</span>');
+                if (s.owned)    labels.push('<span class="badge" style="background:var(--eggplant-400);color:#fff">Replicated</span>');
+                return labels.join(' ') + ` <button class="btn btn-destructive btn-xs" disabled
+                  title="${reasons.join(' · ')}"
+                  style="opacity:0.35;cursor:not-allowed;margin-left:4px">Delete</button>`;
+              })()
+            : `<button class="btn btn-destructive btn-xs" onclick="showDeleteSnapshot(${s.id})">Delete</button>`
+          }
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function applyFilter(val) { state.snapsFilter=val; renderSnapshotRows(); }
+
+function sortBy(col) {
+  if (state.sortCol===col) state.sortAsc=!state.sortAsc; else { state.sortCol=col; state.sortAsc=true; }
+  document.querySelectorAll('th[data-col]').forEach(th=>{
+    const it=th.dataset.col===col;
+    th.classList.toggle('sorted',it);
+    th.querySelector('.sort-arrow').textContent=it?(state.sortAsc?'↑':'↓'):'↕';
+  });
+  renderSnapshotRows();
+}
+function thCol(col,label) {
+  const s=state.sortCol===col;
+  return `<th data-col="${col}" class="${s?'sorted':''}" onclick="sortBy('${col}')">${label} <span class="sort-arrow">${s?(state.sortAsc?'↑':'↓'):'↕'}</span></th>`;
+}
+
+function getDisplayedSnapshots() {
+  let snaps = [...state.snapshots];
+  if (state.snapsFilter) {
+    const q = state.snapsFilter.toLowerCase();
+    snaps = snaps.filter(s => s.name.toLowerCase().includes(q));
+  }
+  snaps.sort((a, b) => {
+    let av = a[state.sortCol], bv = b[state.sortCol];
+    if (['size','id'].includes(state.sortCol)) { av = parseFloat(av)||0; bv = parseFloat(bv)||0; }
+    else if (state.sortCol === 'savings') {
+      av = typeof state.savingsCache[a.id] === 'number' ? state.savingsCache[a.id] : -1;
+      bv = typeof state.savingsCache[b.id] === 'number' ? state.savingsCache[b.id] : -1;
+    } else { av = String(av||''); bv = String(bv||''); }
+    if (av < bv) return state.sortAsc ? -1 : 1;
+    if (av > bv) return state.sortAsc ? 1 : -1;
+    return 0;
+  });
+  return snaps;
+}
+
+async function loadSavingsStatus() {
+  if (!state.activeCluster) return;
+  try {
+    const data = await api('GET', `/api/clusters/${state.activeCluster}/savings/status`);
+    for (const row of (data.cached || [])) {
+      if (row.error) state.savingsCache[row.snapshot_id] = { error: row.error };
+      else if (row.bytes != null) state.savingsCache[row.snapshot_id] = row.bytes;
+    }
+    state.jobStatus    = data.job.status;
+    state.jobTotal     = data.job.total;
+    state.jobCompleted = data.job.completed;
+    updateJobUI();
+    renderSnapshotRows();
+    if (data.job.status === 'running') startPolling(); else stopPolling();
+  } catch(e) { console.error('Failed to load savings status:', e.message); }
+}
+
+function updateJobUI() {
+  // Keep clusterJobStatus in sync so tabs reflect current state
+  if (state.activeCluster) {
+    state.clusterJobStatus[state.activeCluster] = state.jobStatus;
+    renderClusterTabs();
+  }
+  const btn       = document.getElementById('calc-all-btn');
+  const cancelBtn = document.getElementById('calc-cancel-btn');
+  const clearBtn  = document.getElementById('calc-clear-btn');
+  const progress  = document.getElementById('calc-progress');
+  const running   = state.jobStatus === 'running';
+  if (btn)       { btn.disabled = running; btn.textContent = running ? '⚡ Calculating…' : '⚡ Calculate All Savings'; }
+  if (cancelBtn) cancelBtn.style.display = running ? 'inline-flex' : 'none';
+  if (clearBtn)  clearBtn.style.display  = (!running && state.jobStatus !== 'idle') ? 'inline-flex' : 'none';
+  if (progress) {
+    if (running)                        { progress.style.display='inline'; progress.textContent=`${state.jobCompleted} / ${state.jobTotal}`; }
+    else if (state.jobStatus==='complete')  { progress.style.display='inline'; progress.textContent=`Complete — ${state.jobCompleted} snapshots`; }
+    else if (state.jobStatus==='cancelled') { progress.style.display='inline'; progress.textContent=`Cancelled at ${state.jobCompleted} / ${state.jobTotal}`; }
+    else if (state.jobStatus==='error')     { progress.style.display='inline'; progress.textContent='Job encountered an error'; }
+    else                                    { progress.style.display='none'; }
+  }
+}
+
+function startPolling() {
+  if (state.pollTimer) return;
+  state.pollTimer = setInterval(async () => {
+    await loadSavingsStatus();
+    if (state.jobStatus !== 'running') stopPolling();
+  }, 3000);
+}
+
+function stopPolling() {
+  if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+}
+
+async function calcOneSavings(snapId) {
+  const existing = await api('GET', `/api/clusters/${state.activeCluster}/savings/status`);
+  if (existing.job.status === 'running') { toast('A calculation job is already running', 'info'); return; }
+  state.savingsCache[snapId] = 'loading';
+  renderSnapshotRows();
+  try {
+    await api('POST', `/api/clusters/${state.activeCluster}/savings/start`, { snapshot_ids: [snapId] });
+    startPolling(); updateJobUI();
+  } catch(e) { state.savingsCache[snapId] = { error: e.message }; renderSnapshotRows(); }
+}
+
+async function calcAllSavings() {
+  if (state.jobStatus === 'running') return;
+  const snapshotIds = getDisplayedSnapshots()
+    .filter(s => typeof state.savingsCache[s.id] !== 'number')
+    .map(s => s.id);
+  if (snapshotIds.length === 0) { toast('All visible snapshots already have savings calculated', 'info'); return; }
+  try {
+    await api('POST', `/api/clusters/${state.activeCluster}/savings/start`, { snapshot_ids: snapshotIds });
+    state.jobStatus = 'running'; state.jobTotal = snapshotIds.length; state.jobCompleted = 0;
+    updateJobUI(); startPolling();
+  } catch(e) { toast('Failed to start job: ' + e.message, 'error'); }
+}
+
+async function cancelCalcAll() {
+  try {
+    await api('POST', `/api/clusters/${state.activeCluster}/savings/cancel`);
+    toast('Cancelling…', 'info');
+  } catch(e) { toast('Cancel failed: ' + e.message, 'error'); }
+}
+
+async function clearSavingsCache() {
+  if (!confirm('Clear all saved savings calculations for this cluster?')) return;
+  try {
+    await api('DELETE', `/api/clusters/${state.activeCluster}/savings/cache`);
+    state.savingsCache = {}; state.jobStatus = 'idle'; state.jobTotal = 0; state.jobCompleted = 0;
+    updateJobUI(); renderSnapshotRows(); toast('Savings cache cleared', 'success');
+  } catch(e) { toast('Failed to clear cache: ' + e.message, 'error'); }
+}
+
+function showDeleteSnapshot(snapId) {
+  const snap=state.snapshots.find(s=>s.id===snapId); if(!snap) return;
+  const sav=state.savingsCache[snapId];
+  const savTxt=typeof sav==='number'?`<br>Estimated space freed: <span class="danger-savings">${fmtBytes(sav)}</span>`:'';
+  showModal(`<div class="modal-title">Delete Snapshot</div>
+    <div class="modal-danger-zone">Permanently delete:<br>
+      <span class="danger-name">${escHtml(snap.name)}</span> (ID: ${snap.id})${savTxt}<br><br>
+      <strong style="font-weight:600">This action cannot be undone.</strong>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-destructive" onclick="doDeleteSnapshot(${snapId})">Delete Snapshot</button>
+    </div>`);
+}
+async function doDeleteSnapshot(snapId) {
+  const snap=state.snapshots.find(s=>s.id===snapId); closeModal();
+  try {
+    await api('DELETE',`/api/clusters/${state.activeCluster}/snapshots/${snapId}`);
+    state.snapshots=state.snapshots.filter(s=>s.id!==snapId);
+    delete state.savingsCache[snapId]; renderSnapshotRows();
+    toast(`Snapshot "${snap?.name}" deleted`,'success');
+  } catch(e) { toast('Delete failed: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════════════════════════════════
+async function renderAdminView(mc) {
+  mc.innerHTML=`
+    <div class="section-header">
+      <div><div class="section-title">Administration</div><div class="section-sub">User account management</div></div>
+      <button class="btn btn-primary btn-sm" onclick="showAddUser()">+ New User</button>
+    </div>
+    <div class="card" id="users-card"><span class="spinner"></span> Loading…</div>`;
+  loadUsers();
+}
+async function loadUsers() {
+  try {
+    const users=await api('GET','/api/users');
+    const card=document.getElementById('users-card'); if(!card) return;
+    card.innerHTML=`<table class="admin-table"><thead><tr>
+      <th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead><tbody>
+      ${users.map(u=>`<tr>
+        <td style="font-weight:500;color:var(--lychee-100)">${escHtml(u.username)}</td>
+        <td><span class="badge ${u.role==='admin'?'badge-info':'badge-neutral'}">${u.role}</span></td>
+        <td class="td-dim">${fmtDate(u.created_at)}</td>
+        <td><div class="flex-row flex-right">
+          <button class="btn btn-secondary btn-xs" onclick="showResetPassword(${u.id},'${escHtml(u.username)}')">Reset Password</button>
+          ${u.username!==state.user?.username?`<button class="btn btn-destructive btn-xs" onclick="deleteUser(${u.id},'${escHtml(u.username)}')">Delete</button>`:''}
+        </div></td>
+      </tr>`).join('')}
+      </tbody></table>`;
+  } catch(e) { toast('Failed to load users: '+e.message,'error'); }
+}
+function showAddUser() {
+  showModal(`<div class="modal-title">Create User</div>
+    <div class="field"><label>Username</label><input id="m-uname" placeholder="jsmith"></div>
+    <div class="field"><label>Password</label><input id="m-upass" type="password" placeholder="••••••••"></div>
+    <div class="field"><label>Role</label><select id="m-urole"><option value="user">User</option><option value="admin">Admin</option></select></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doAddUser()">Create User</button>
+    </div>`);
+}
+async function doAddUser() {
+  const username=v('m-uname'),password=v('m-upass'),role=document.getElementById('m-urole')?.value;
+  if (!username||!password) { toast('Username and password are required','error'); return; }
+  try {
+    await api('POST','/api/users',{username,password,role});
+    closeModal(); toast(`User "${username}" created`,'success'); loadUsers();
+  } catch(e) { toast(e.message,'error'); }
+}
+function showResetPassword(id,username) {
+  showModal(`<div class="modal-title">Reset Password — ${escHtml(username)}</div>
+    <div class="field"><label>New Password</label><input id="m-newpw" type="password" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doResetPassword(${id})">Reset Password</button>
+    </div>`);
+}
+async function doResetPassword(id) {
+  const pw=v('m-newpw'); if(!pw) { toast('Enter a new password','error'); return; }
+  try { await api('PUT',`/api/users/${id}/password`,{password:pw}); closeModal(); toast('Password reset successfully','success'); }
+  catch(e) { toast(e.message,'error'); }
+}
+async function deleteUser(id,username) {
+  if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+  try { await api('DELETE',`/api/users/${id}`); toast(`User "${username}" deleted`,'success'); loadUsers(); }
+  catch(e) { toast(e.message,'error'); }
+}
+function showChangePassword() {
+  showModal(`<div class="modal-title">Change Password</div>
+    <div class="field"><label>Current Password</label><input id="m-cpw" type="password" placeholder="••••••••"></div>
+    <div class="field"><label>New Password</label><input id="m-npw" type="password" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
+    </div>`);
+}
+async function doChangePassword() {
+  const cur=v('m-cpw'),nw=v('m-npw');
+  if (!cur||!nw) { toast('Both fields are required','error'); return; }
+  try { await api('PUT','/api/auth/password',{currentPassword:cur,newPassword:nw}); closeModal(); toast('Password updated successfully','success'); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL & TOAST
+// ═══════════════════════════════════════════════════════════════════
+function showModal(html) {
+  document.getElementById('modal-container').innerHTML=
+    `<div class="modal-overlay" onclick="closeModalOverlay(event)"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('modal-container').innerHTML=''; }
+function closeModalOverlay(e) { if(e.target.classList.contains('modal-overlay')) closeModal(); }
+function toast(msg,type='info') {
+  const c=document.getElementById('toast-container');
+  const el=document.createElement('div'); el.className=`toast toast-${type}`; el.textContent=msg;
+  c.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),300); },3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════════
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function v(id) { return (document.getElementById(id)?.value||'').trim(); }
+function fmtBytes(bytes) {
+  const b=parseFloat(bytes); if(isNaN(b)||b===0) return '0 B';
+  const u=['B','KB','MB','GB','TB','PB']; const i=Math.floor(Math.log(Math.abs(b))/Math.log(1024));
+  return (b/Math.pow(1024,i)).toFixed(2)+' '+u[Math.min(i,u.length-1)];
+}
+function fmtDate(s) { if(!s) return '—'; try { return new Date(s).toLocaleDateString(); } catch { return s; } }
+function fmtDateTime(s) { if(!s) return '—'; try { return new Date(s).toLocaleString(); } catch { return s; } }
+
+// Boot
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+init();
+</script>
+</body>
+</html>
