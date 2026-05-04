@@ -121,7 +121,7 @@ async function qumuloDelete(cluster, apiPath) {
   const url = `https://${cluster.host}:${cluster.port}${apiPath}`;
   const res = await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }, agent: getAgent(cluster.host) });
   if (!res.ok) throw new Error(`Qumulo DELETE error: ${res.status}`);
-  return res.status === 204 ? {} : res.json();
+  return {};
 }
 
 // ── Savings job runner ────────────────────────────────────────────────────────
@@ -160,6 +160,7 @@ async function runSavingsJob(cluster, snapshotIds) {
       return;
     }
     try {
+      // Always get a fresh token — handles expiry mid-job
       const token = await getToken(cluster);
       const url = `https://${cluster.host}:${cluster.port}/v1/snapshots/calculate-used-capacity`;
       const res = await fetch(url, {
@@ -169,17 +170,42 @@ async function runSavingsJob(cluster, snapshotIds) {
         agent: getAgent(cluster.host)
       });
       if (!res.ok) {
-        const txt = await res.text();
-        upsertCache.run(clusterId, snapId, null, `Qumulo API: ${res.status} ${txt}`);
+        // On 401, force token refresh and retry once
+        if (res.status === 401) {
+          tokenCache.delete(clusterId);
+          const token2 = await getToken(cluster);
+          const res2 = await fetch(url, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token2}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify([snapId]),
+            agent: getAgent(cluster.host)
+          });
+          if (res2.ok) {
+            const data2 = await res2.json();
+            upsertCache.run(clusterId, snapId, parseInt(data2.bytes) || 0, null);
+          } else {
+            const txt2 = await res2.text();
+            console.error(`[savings] Retry failed for snapshot ${snapId}: ${res2.status} ${txt2}`);
+            upsertCache.run(clusterId, snapId, null, `Qumulo API: ${res2.status} ${txt2}`);
+          }
+        } else {
+          const txt = await res.text();
+          console.error(`[savings] Error for snapshot ${snapId}: ${res.status} ${txt}`);
+          upsertCache.run(clusterId, snapId, null, `Qumulo API: ${res.status} ${txt}`);
+        }
       } else {
         const data = await res.json();
         upsertCache.run(clusterId, snapId, parseInt(data.bytes) || 0, null);
       }
     } catch (e) {
+      console.error(`[savings] Exception for snapshot ${snapId}:`, e.message);
       upsertCache.run(clusterId, snapId, null, e.message);
     }
     completed++;
     incrementJob.run(clusterId);
+    if (completed % 100 === 0) {
+      console.log(`[savings] Cluster ${clusterId}: ${completed}/${snapshotIds.length} complete`);
+    }
   }
 
   finishJob.run('complete', clusterId);
@@ -355,7 +381,7 @@ app.delete('/api/clusters/:id/snapshots/:snapId', requireAuth, async (req, res) 
   const cluster = db.prepare('SELECT * FROM clusters WHERE id = ?').get(parseInt(req.params.id));
   if (!cluster) return res.status(404).json({ error: 'Cluster not found' });
   try {
-    await qumuloDelete(cluster, `/v3/snapshots/${req.params.snapId}/`);
+    await qumuloDelete(cluster, `/v1/snapshots/${req.params.snapId}`);
     db.prepare('DELETE FROM savings_cache WHERE cluster_id=? AND snapshot_id=?').run(cluster.id, parseInt(req.params.snapId));
     res.json({ ok: true });
   } catch (e) { res.status(502).json({ error: e.message }); }

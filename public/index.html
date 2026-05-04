@@ -663,13 +663,12 @@ async function refreshSnapshots(showToast=true) {
     state.snapshots=(data.entries||data.snapshots||[]).map(s=>({
       id:s.id, name:s.name,
       created:s.timestamp||s.created,
-      expiry:s.expiration_time||s.expiry||null,
+      expiry:s.expiration||s.expiration_time||s.expiry||null,
       size:s.size_used_bytes!=null?s.size_used_bytes:(s.size!=null?s.size:null),
       lock_key: s.lock_key ?? null,
       owned: Array.isArray(s.owners) && s.owners.length > 0,
       path: s.source_file_path ?? ''
     }));
-    state.savingsCache={};
     renderSnapshotRows();
     if (showToast) toast(`Loaded ${state.snapshots.length} snapshots`,'success');
     await loadSavingsStatus();
@@ -730,7 +729,7 @@ function renderSnapshotRows() {
       <td class="td-mono td-dim">${s.id}</td>
       <td class="td-mono td-dim" title="${escHtml(s.path)}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(s.path)||'<span style="color:var(--lychee-500)">—</span>'}</td>
       <td class="td-dim">${fmtDateTime(s.created)}</td>
-      <td class="td-dim">${s.expiry?fmtDateTime(s.expiry):'<span style="color:var(--lychee-500)">Never</span>'}</td>
+      <td class="td-dim">${s.expiry&&s.expiry!==''?fmtDateTime(s.expiry):'<span style="color:var(--lychee-500)">Never</span>'}</td>
       <td>${s.size!=null?`<span class="td-size">${fmtBytes(s.size)}</span>`:'<span class="td-na">—</span>'}</td>
       <td>${savCell}</td>
       <td>
@@ -799,11 +798,18 @@ async function loadSavingsStatus() {
       if (row.error) state.savingsCache[row.snapshot_id] = { error: row.error };
       else if (row.bytes != null) state.savingsCache[row.snapshot_id] = row.bytes;
     }
+    // If job is still running, ensure snapshots not yet calculated show spinner
+    if (data.job.status === 'running') {
+      state.snapshots.forEach(s => {
+        if (state.savingsCache[s.id] === undefined) state.savingsCache[s.id] = 'loading';
+      });
+    }
     state.jobStatus    = data.job.status;
     state.jobTotal     = data.job.total;
     state.jobCompleted = data.job.completed;
-    updateJobUI();
+    // Render rows first so DOM elements exist before updateJobUI tries to find them
     renderSnapshotRows();
+    updateJobUI();
     if (data.job.status === 'running') startPolling(); else stopPolling();
   } catch(e) { console.error('Failed to load savings status:', e.message); }
 }
@@ -818,6 +824,8 @@ function updateJobUI() {
   const cancelBtn = document.getElementById('calc-cancel-btn');
   const clearBtn  = document.getElementById('calc-clear-btn');
   const progress  = document.getElementById('calc-progress');
+  // If toolbar elements don't exist yet the view isn't rendered — nothing to update
+  if (!btn && !cancelBtn) return;
   const running   = state.jobStatus === 'running';
   if (btn)       { btn.disabled = running; btn.textContent = running ? '⚡ Calculating…' : '⚡ Calculate All Savings'; }
   if (cancelBtn) cancelBtn.style.display = running ? 'inline-flex' : 'none';
@@ -856,14 +864,15 @@ async function calcOneSavings(snapId) {
 
 async function calcAllSavings() {
   if (state.jobStatus === 'running') return;
-  const snapshotIds = getDisplayedSnapshots()
-    .filter(s => typeof state.savingsCache[s.id] !== 'number')
-    .map(s => s.id);
+  const snapsToCalc = getDisplayedSnapshots().filter(s => typeof state.savingsCache[s.id] !== 'number');
+  const snapshotIds = snapsToCalc.map(s => s.id);
   if (snapshotIds.length === 0) { toast('All visible snapshots already have savings calculated', 'info'); return; }
   try {
     await api('POST', `/api/clusters/${state.activeCluster}/savings/start`, { snapshot_ids: snapshotIds });
     state.jobStatus = 'running'; state.jobTotal = snapshotIds.length; state.jobCompleted = 0;
-    updateJobUI(); startPolling();
+    // Mark all pending snapshots as loading so spinner shows immediately
+    snapsToCalc.forEach(s => { state.savingsCache[s.id] = 'loading'; });
+    updateJobUI(); renderSnapshotRows(); startPolling();
   } catch(e) { toast('Failed to start job: ' + e.message, 'error'); }
 }
 
@@ -1000,9 +1009,14 @@ function closeModal() { document.getElementById('modal-container').innerHTML='';
 function closeModalOverlay(e) { if(e.target.classList.contains('modal-overlay')) closeModal(); }
 function toast(msg,type='info') {
   const c=document.getElementById('toast-container');
-  const el=document.createElement('div'); el.className=`toast toast-${type}`; el.textContent=msg;
+  const el=document.createElement('div'); el.className=`toast toast-${type}`;
+  el.textContent=msg; el.style.cursor='pointer'; el.title='Click to dismiss';
+  el.addEventListener('click', ()=>el.remove());
   c.appendChild(el);
-  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),300); },3500);
+  // Errors stay until clicked; others auto-dismiss after 5s
+  if (type !== 'error') {
+    setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),300); },5000);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
