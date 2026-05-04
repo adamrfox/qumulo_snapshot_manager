@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QSnapMan — Qumulo Snapshot Manager</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -634,6 +635,7 @@ async function renderSnapshotsView(mc) {
       </div>
       <span id="snap-count" class="result-count"></span>
       <button class="btn btn-secondary btn-sm" id="calc-all-btn" onclick="calcAllSavings()">⚡ Calculate All Savings</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ Export CSV</button>
       <button class="btn btn-ghost btn-sm" id="calc-cancel-btn" onclick="cancelCalcAll()" style="display:none;color:var(--pomegranate-400)">✕ Cancel</button>
       <button class="btn btn-ghost btn-sm" id="calc-clear-btn" onclick="clearSavingsCache()" style="display:none;color:var(--lychee-500)">Clear Cache</button>
       <span id="calc-progress" style="font-size:0.8125rem;color:var(--lychee-500);display:none"></span>
@@ -1001,6 +1003,65 @@ async function doChangePassword() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════════════
+function exportCSV() {
+  const cluster = state.clusters.find(c => c.id === state.activeCluster);
+  const snaps = getDisplayedSnapshots();
+
+  const headers = ['ID','Name','Directory','Created','Expires','Space Used (bytes)','Space Used','Savings If Deleted (bytes)','Savings If Deleted','Locked','Replicated'];
+
+  const rows = snaps.map(s => {
+    const sav = state.savingsCache[s.id];
+    const savBytes = typeof sav === 'number' ? sav : '';
+    const savFmt   = typeof sav === 'number' ? fmtBytes(sav) : '';
+    return [
+      s.id,
+      csvQuote(s.name),
+      csvQuote(s.path || ''),
+      s.created ? csvQuote(new Date(s.created).toLocaleString()) : '',
+      s.expiry && s.expiry !== '' ? csvQuote(new Date(s.expiry).toLocaleString()) : 'Never',
+      s.size != null ? s.size : '',
+      s.size != null ? fmtBytes(s.size) : '',
+      savBytes,
+      savFmt,
+      s.lock_key ? 'Yes' : 'No',
+      s.owned    ? 'Yes' : 'No'
+    ].join(',');
+  });
+
+  // Totals row
+  const totalSize = snaps.reduce((sum, s) => sum + (s.size != null ? parseFloat(s.size) : 0), 0);
+  const totalSavings = snaps.reduce((sum, s) => {
+    const sav = state.savingsCache[s.id];
+    return sum + (typeof sav === 'number' ? sav : 0);
+  }, 0);
+  const totalsRow = [
+    '', 'TOTAL', '', '', '',
+    totalSize, fmtBytes(totalSize),
+    totalSavings || '', totalSavings ? fmtBytes(totalSavings) : '',
+    '', ''
+  ].join(',');
+
+  const csv = [headers.join(','), ...rows, totalsRow].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const clusterName = cluster ? cluster.name.replace(/[^a-z0-9]/gi, '_') : 'cluster';
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `snapshots_${clusterName}_${date}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast(`Exported ${snaps.length} snapshots`, 'success');
+}
+
+function csvQuote(str) {
+  if (str == null) return '';
+  const s = String(str);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  MODAL & TOAST
 // ═══════════════════════════════════════════════════════════════════
 function showModal(html) {
@@ -1028,8 +1089,8 @@ function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&
 function v(id) { return (document.getElementById(id)?.value||'').trim(); }
 function fmtBytes(bytes) {
   const b=parseFloat(bytes); if(isNaN(b)||b===0) return '0 B';
-  const u=['B','KB','MB','GB','TB','PB']; const i=Math.floor(Math.log(Math.abs(b))/Math.log(1024));
-  return (b/Math.pow(1024,i)).toFixed(2)+' '+u[Math.min(i,u.length-1)];
+  const u=['B','KB','MB','GB','TB','PB']; const i=Math.floor(Math.log(Math.abs(b))/Math.log(1000));
+  return (b/Math.pow(1000,i)).toFixed(2)+' '+u[Math.min(i,u.length-1)];
 }
 function fmtDate(s) { if(!s) return '—'; try { return new Date(s).toLocaleDateString(); } catch { return s; } }
 function fmtDateTime(s) { if(!s) return '—'; try { return new Date(s).toLocaleString(); } catch { return s; } }
