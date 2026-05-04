@@ -746,7 +746,9 @@ function renderSnapshotRows() {
                   title="${reasons.join(' · ')}"
                   style="opacity:0.35;cursor:not-allowed;margin-left:4px">Delete</button>`;
               })()
-            : `<button class="btn btn-destructive btn-xs" onclick="showDeleteSnapshot(${s.id})">Delete</button>`
+            : state.user?.role === 'admin'
+              ? `<button class="btn btn-destructive btn-xs" onclick="showDeleteSnapshot(${s.id})">Delete</button>`
+              : `<span class="td-na">—</span>`
           }
         </div>
       </td>

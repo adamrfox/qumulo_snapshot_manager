@@ -377,7 +377,7 @@ app.get('/api/clusters/:id/snapshots', requireAuth, async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
-app.delete('/api/clusters/:id/snapshots/:snapId', requireAuth, async (req, res) => {
+app.delete('/api/clusters/:id/snapshots/:snapId', requireAuth, requireAdmin, async (req, res) => {
   const cluster = db.prepare('SELECT * FROM clusters WHERE id = ?').get(parseInt(req.params.id));
   if (!cluster) return res.status(404).json({ error: 'Cluster not found' });
   try {
